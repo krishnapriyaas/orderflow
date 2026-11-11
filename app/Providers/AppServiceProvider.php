@@ -6,11 +6,13 @@ namespace App\Providers;
 
 use App\Contracts\OrderNoteExtractor;
 use App\Contracts\PaymentGateway;
+use App\Models\User;
 use App\Services\OrderNotes\FakeOrderNoteExtractor;
 use App\Services\OrderNotes\LlmOrderNoteExtractor;
 use App\Services\Payment\FakePaymentGateway;
 use App\Services\Payment\WebhookSignatureVerifier;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -60,6 +62,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Gate::define('review-order-notes', fn (User $user): bool => $user->is_admin);
     }
 }
