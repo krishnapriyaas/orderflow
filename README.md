@@ -25,6 +25,8 @@ Built with Laravel 13, Livewire 4 and SQLite, with Claude Code as my AI agent.
 - **Tests never call the real API.** Tests use `FakeOrderNoteExtractor` or `Http::fake`, and `Http::preventStrayRequests()` fails any unfaked call. Without an API key the app uses the fake, which sends every note to review.
 - **A person decides the rest.** Extractions in `needs_review` are listed on `/admin/reviews`. The reviewer sees the original note, the reason and the confidence, can correct the three fields and approves or rejects. Approved fields are validated with the same lengths as the model's answer, and a past delivery date is blocked. A date more than a year ahead is allowed here: that rule exists because the model can misread a date, and a person who checked the note is the check. Only a date more than 2 years ahead is rejected, as a guard against typos.
 
+![Review page: a low-confidence note and a prompt-injection attempt, both waiting for a person](docs/review-page.png)
+
 ## How I worked with the AI agent
 
 I built OrderFlow with Claude Code as the agent that plans and writes the code. I used a
