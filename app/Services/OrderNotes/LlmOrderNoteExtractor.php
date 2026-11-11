@@ -191,8 +191,8 @@ class LlmOrderNoteExtractor implements OrderNoteExtractor
     {
         $validator = Validator::make($answer, [
             'delivery_date' => ['present', 'nullable', 'string', 'date_format:Y-m-d'],
-            'po_number' => ['present', 'nullable', 'string', 'max:100'],
-            'invoice_address' => ['present', 'nullable', 'string', 'max:500'],
+            'po_number' => ['present', 'nullable', 'string', 'max:'.ExtractedOrderNote::PO_NUMBER_MAX_LENGTH],
+            'invoice_address' => ['present', 'nullable', 'string', 'max:'.ExtractedOrderNote::INVOICE_ADDRESS_MAX_LENGTH],
             'confidence' => ['required'],
             'instructions_detected' => ['required'],
         ]);

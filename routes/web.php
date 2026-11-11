@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Livewire\Admin\ReviewQueue;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -16,3 +17,7 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')->name('logout');
+
+Route::livewire('/admin/reviews', ReviewQueue::class)
+    ->middleware(['auth', 'can:review-order-notes'])
+    ->name('admin.reviews');

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Enums;
 
 use App\Enums\NoteExtractionStatus;
+use App\Exceptions\InvalidNoteExtractionStatusTransitionException;
 use PHPUnit\Framework\TestCase;
 
 class NoteExtractionStatusTest extends TestCase
@@ -17,6 +18,19 @@ class NoteExtractionStatusTest extends TestCase
         );
         $this->assertTrue(NoteExtractionStatus::NeedsReview->canTransitionTo(NoteExtractionStatus::Approved));
         $this->assertFalse(NoteExtractionStatus::NeedsReview->canTransitionTo(NoteExtractionStatus::AutoApplied));
+    }
+
+    public function test_transition_to_returns_the_target_or_throws(): void
+    {
+        $this->assertSame(
+            NoteExtractionStatus::Rejected,
+            NoteExtractionStatus::NeedsReview->transitionTo(NoteExtractionStatus::Rejected),
+        );
+
+        $this->expectException(InvalidNoteExtractionStatusTransitionException::class);
+        $this->expectExceptionMessage('Note extraction status cannot change from approved to rejected.');
+
+        NoteExtractionStatus::Approved->transitionTo(NoteExtractionStatus::Rejected);
     }
 
     public function test_the_other_statuses_are_final(): void

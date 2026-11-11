@@ -25,7 +25,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property NoteReviewReason|null $review_reason
  * @property string|null $raw_response
  * @property string|null $error
+ * @property int|null $reviewed_by_user_id
+ * @property CarbonImmutable|null $reviewed_at
  * @property-read Order $order
+ * @property-read User|null $reviewedBy
  */
 #[Fillable([
     'delivery_date',
@@ -37,6 +40,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'review_reason',
     'raw_response',
     'error',
+    'reviewed_by_user_id',
+    'reviewed_at',
 ])]
 class OrderNoteExtraction extends Model
 {
@@ -52,6 +57,14 @@ class OrderNoteExtraction extends Model
     }
 
     /**
+     * @return BelongsTo<User, $this>
+     */
+    public function reviewedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by_user_id');
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -62,6 +75,7 @@ class OrderNoteExtraction extends Model
             'instructions_detected' => 'boolean',
             'status' => NoteExtractionStatus::class,
             'review_reason' => NoteReviewReason::class,
+            'reviewed_at' => 'immutable_datetime',
         ];
     }
 }

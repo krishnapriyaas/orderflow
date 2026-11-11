@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+use App\Exceptions\InvalidNoteExtractionStatusTransitionException;
+
 enum NoteExtractionStatus: string
 {
     case AutoApplied = 'auto_applied';
@@ -27,5 +29,19 @@ enum NoteExtractionStatus: string
     public function canTransitionTo(self $to): bool
     {
         return in_array($to, $this->allowedTransitions(), true);
+    }
+
+    /**
+     * Returns the target status, or throws if the move is not allowed.
+     *
+     * @throws InvalidNoteExtractionStatusTransitionException
+     */
+    public function transitionTo(self $to): self
+    {
+        if (! $this->canTransitionTo($to)) {
+            throw new InvalidNoteExtractionStatusTransitionException($this, $to);
+        }
+
+        return $to;
     }
 }

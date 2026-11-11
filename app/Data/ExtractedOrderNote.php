@@ -12,6 +12,11 @@ use Carbon\CarbonImmutable;
  */
 final readonly class ExtractedOrderNote
 {
+    /** Shared by the LLM answer validation and the review page. */
+    public const PO_NUMBER_MAX_LENGTH = 100;
+
+    public const INVOICE_ADDRESS_MAX_LENGTH = 500;
+
     /**
      * @param  float  $confidence  0.0 – 1.0, as reported by the model
      * @param  bool  $instructionsDetected  the note tried to instruct the model
