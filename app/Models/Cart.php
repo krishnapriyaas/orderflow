@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Exceptions\CartAlreadyCheckedOutException;
 use Database\Factories\CartFactory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -51,6 +52,27 @@ class Cart extends Model
     public function order(): HasOne
     {
         return $this->hasOne(Order::class);
+    }
+
+    public function isCheckedOut(): bool
+    {
+        return $this->order()->exists();
+    }
+
+    /**
+     * Locks the cart row (inside a transaction) and throws if it was already checked out.
+     *
+     * @throws CartAlreadyCheckedOutException
+     */
+    public static function lockOpenCart(int $cartId): self
+    {
+        $cart = self::query()->lockForUpdate()->findOrFail($cartId);
+
+        if ($cart->isCheckedOut()) {
+            throw new CartAlreadyCheckedOutException;
+        }
+
+        return $cart;
     }
 
     public function totalCents(): int

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Cart;
 
+use App\Exceptions\CartAlreadyCheckedOutException;
 use App\Exceptions\InsufficientStockException;
 use App\Models\Cart;
 use App\Models\CartItem;
@@ -17,10 +18,13 @@ class AddItemToCart
      * the quantity is added to the existing line.
      *
      * @throws InsufficientStockException
+     * @throws CartAlreadyCheckedOutException
      */
     public function execute(Cart $cart, int $productId, int $quantity): CartItem
     {
         return DB::transaction(function () use ($cart, $productId, $quantity): CartItem {
+            Cart::lockOpenCart($cart->id);
+
             $product = Product::query()->lockForUpdate()->findOrFail($productId);
 
             $item = $cart->items()->firstOrNew(['product_id' => $product->id], ['quantity' => 0]);
