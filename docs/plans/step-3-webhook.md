@@ -107,3 +107,14 @@ headers; old and future timestamp; no secret configured; malformed payload (422)
 `event_id`; failed after paid; unknown reference; amount and currency mismatch; unknown type;
 `Event::fake` (OrderPaid exactly once) and `Queue::fake` (ExtractOrderNote exactly once);
 OrderPaid runs after commit; verifier unit tests (300 s / 301 s boundaries).
+
+## My review
+
+I reviewed this plan with a second Claude chat as a reviewer, then made the final decisions myself.
+
+- Agreed: the signature is checked over the raw body before anything is written.
+- Changed: I asked for the same insert-and-catch pattern as in checkout, not insertOrIgnore,
+  because insertOrIgnore hides other errors on MySQL.
+- Added: the paid amount and currency must match the order. I also allowed payment_failed → paid,
+  because the provider decides if money was taken.
+- Learned: a test is only useful if it can fail. The agent proved it by breaking the code on purpose.

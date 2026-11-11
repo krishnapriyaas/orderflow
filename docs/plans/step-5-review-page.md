@@ -122,3 +122,14 @@ logout; seeder seeds every state and runs twice; enum `transitionTo()`.
 ## Commits
 
 1. Livewire install. 2. Admin login. 3. Review page with actions. 4. Demo seeder. 5. README.
+
+## My review
+
+I reviewed this plan with a second Claude chat as a reviewer, then made the final decisions myself.
+
+- Agreed: built-in auth with an is_admin flag, and demo data only in local and testing.
+- Changed: reviewers may approve dates more than a year ahead. That rule exists because the model
+  can misread a date, and a person who checked the note is the check.
+- Added: after the agent pointed out my decision allowed year 9999, a 2-year sanity limit.
+  The "today in Berlin" logic moved into one helper.
+- Learned: reviewing works in both directions. The agent found a gap in my own decision.

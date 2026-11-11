@@ -133,3 +133,14 @@ than a year ahead; `instructions_detected`; prompt-injection note end to end wit
 late-evening note (Berlin date, not UTC); job run twice; invalid JSON / missing field / refusal /
 4xx → review; HTTP 500 → review after 3 attempts on the database queue; the extractor sends the
 expected request and parses a sample response; enum transitions.
+
+## My review
+
+I reviewed this plan with a second Claude chat as a reviewer, then made the final decisions myself.
+
+- Agreed: the note is data, not instructions, and every model answer is validated in PHP.
+- Changed: Haiku as the default model, because this is a small task and cost matters for an SME.
+  Only the model's answer text is stored, not the full API response (GDPR data minimisation).
+- Added: instructions_detected always sends the note to review. A manipulated model can't be
+  trusted to judge itself, so code decides. "Today" uses Europe/Berlin.
+- Learned: with AI features, the hard part is deciding what happens when the model is wrong.
