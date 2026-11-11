@@ -12,6 +12,7 @@ use App\Exceptions\InvalidNoteExtractionException;
 use App\Exceptions\NoteExtractionUnavailableException;
 use App\Models\Order;
 use App\Models\OrderNoteExtraction;
+use App\Support\BusinessDate;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Log;
@@ -40,7 +41,7 @@ class ExtractOrderNoteData
             return $existing;
         }
 
-        $today = $this->today();
+        $today = BusinessDate::today();
 
         try {
             $result = $this->extractor->extract($note, $today);
@@ -136,16 +137,6 @@ class ExtractOrderNoteData
         }
 
         return null;
-    }
-
-    /**
-     * The business date: "today" for the wholesaler, not the server's UTC date.
-     */
-    private function today(): CarbonImmutable
-    {
-        $timezone = config('orderflow.business_timezone');
-
-        return CarbonImmutable::now(is_string($timezone) ? $timezone : 'Europe/Berlin')->startOfDay();
     }
 
     /**

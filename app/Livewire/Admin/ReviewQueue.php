@@ -11,7 +11,7 @@ use App\Enums\NoteExtractionStatus;
 use App\Exceptions\InvalidNoteExtractionStatusTransitionException;
 use App\Models\OrderNoteExtraction;
 use App\Models\User;
-use Carbon\CarbonImmutable;
+use App\Support\BusinessDate;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -53,7 +53,7 @@ class ReviewQueue extends Component
         $extraction = OrderNoteExtraction::query()->with('order')->findOrFail($id);
 
         $this->validate(
-            ReviewedOrderNote::rules($this->today(), "fields.{$id}."),
+            ReviewedOrderNote::rules(BusinessDate::today(), "fields.{$id}."),
             attributes: [
                 "fields.{$id}.delivery_date" => 'delivery date',
                 "fields.{$id}.po_number" => 'PO number',
@@ -134,15 +134,5 @@ class ReviewQueue extends Component
         abort_unless($user instanceof User, 403);
 
         return $user;
-    }
-
-    /**
-     * The business date: a delivery date is "in the past" by the wholesaler's calendar.
-     */
-    private function today(): CarbonImmutable
-    {
-        $timezone = config('orderflow.business_timezone');
-
-        return CarbonImmutable::now(is_string($timezone) ? $timezone : 'Europe/Berlin')->startOfDay();
     }
 }

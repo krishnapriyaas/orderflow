@@ -11,6 +11,7 @@ use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Support\BusinessDate;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -30,8 +31,7 @@ class DemoOrderSeeder extends Seeder
         $this->call(ProductSeeder::class);
 
         $admin = $this->admin();
-        $timezone = config('orderflow.business_timezone');
-        $today = CarbonImmutable::now(is_string($timezone) ? $timezone : 'Europe/Berlin')->startOfDay();
+        $today = BusinessDate::today();
 
         foreach ($this->orders($today, $admin) as $number => $demo) {
             $this->createOrder($number, $demo['email'], $demo['note'], $demo['extraction']);
