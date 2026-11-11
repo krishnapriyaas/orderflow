@@ -30,3 +30,21 @@ response, because a wholesaler doesn't want customers to see its stock. I also a
 lowercased emails and a separate commit to block cart changes after checkout.
 
 **Lesson:** The agent was honest about what it could not test (the race between two checkouts on SQLite). I put this in the README as a known limit instead of hiding it.
+
+---
+## Step 3 — Payment webhook
+
+**Asked:** Plan a signed payment webhook, plan first, no code. HMAC signature over the raw body,
+old timestamps rejected, each event processed only once, and an OrderPaid event after the commit.
+
+**Agent proposed:** A careful plan. It noticed by itself that postJson() in tests would re-encode
+the JSON and break the signature, so the tests send the exact raw body. It also proved its
+after-commit test works: it removed ShouldDispatchAfterCommit, saw the test fail, and put it back.
+
+**What I changed:** I added a check that the paid amount and currency match the order. If not,
+the order is not marked paid. I allowed payment_failed → paid, because if the provider says the
+money was taken, the order must be paid. I also asked for the same insert-and-catch pattern as
+in checkout instead of insertOrIgnore, which hides other errors on MySQL.
+
+**Lesson:** A test is only useful if it can fail. Breaking the code on purpose is a quick way
+to check that.
