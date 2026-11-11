@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * @property int $id
@@ -29,6 +30,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $idempotency_key
  * @property-read Cart $cart
  * @property-read Collection<int, OrderItem> $items
+ * @property-read OrderNoteExtraction|null $noteExtraction
  */
 #[Fillable([
     'customer_email',
@@ -76,6 +78,14 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * @return HasOne<OrderNoteExtraction, $this>
+     */
+    public function noteExtraction(): HasOne
+    {
+        return $this->hasOne(OrderNoteExtraction::class);
     }
 
     /**

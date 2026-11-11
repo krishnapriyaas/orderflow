@@ -15,7 +15,8 @@ Work in progress. Full documentation comes when the app is complete.
 - [x] Products and cart API (with tests)
 - [x] Checkout and payment
 - [x] Payment webhook
-- [ ] AI note extraction and review page
+- [x] AI note extraction
+- [ ] Review page
 - [ ] Full documentation
 
 ## Architecture
@@ -31,6 +32,14 @@ Work in progress. Full documentation comes when the app is complete.
 - **Side effects run after commit.** `OrderPaid` is dispatched only after the transaction commits, and a listener queues `ExtractOrderNote`. A rollback can never trigger note extraction for an order that is not paid.
 - **Event row and status change are atomic.** If processing fails, both roll back, so the provider's retry is processed normally instead of being treated as a duplicate.
 
+## AI in the app
+
+- **One narrow job.** After payment, Claude (`claude-haiku-5-5` by default, set with `ANTHROPIC_MODEL`) extracts three fields from the free-text order note: delivery date, PO number and invoice address. The answer is held to a fixed JSON schema (structured outputs), and the API is called with Laravel's Http client.
+- **The note is data, not instructions.** All instructions are in the system prompt. The note is sent inside `<order_note>` tags it cannot close, the model has no tools, and it must flag `instructions_detected` when the note tries to instruct it. A flagged note always goes to review, whatever confidence it claims. An extraction only writes its own row, never the order's status, price or payment.
+- **Nothing the model says is trusted blindly.** PHP validates every answer (types, lengths, a real date, confidence 0–1), and business rules decide the status: a past date, a date more than a year ahead, or confidence below 0.8 sends the extraction to `needs_review` with a `review_reason`. "Today" is the wholesaler's date in Europe/Berlin, not the server's UTC date.
+- **Failures never lose an order.** Rate limits, server errors and timeouts are retried with backoff (3 attempts). Invalid answers, refusals and other API errors go to review at once, with the technical `error` and the `raw_response` kept. The job is idempotent: one row per order, enforced by a unique key.
+- **Tests never call the real API.** Tests use `FakeOrderNoteExtractor` or `Http::fake`, and `Http::preventStrayRequests()` fails any unfaked call. Without an API key the app uses the fake, which sends every note to review.
+
 ## Known limits
 
 - **SQLite ignores row locks.** `lockForUpdate()` is a no-op on SQLite. SQLite serialises write transactions, so the tests are still valid, but they do not prove the locking under concurrent requests the way MySQL or PostgreSQL would.
@@ -41,6 +50,11 @@ Work in progress. Full documentation comes when the app is complete.
 - **Amount mismatches need manual handling.** A webhook whose amount or currency does not match the order is stored as `amount_mismatch` and logged as an error, but nothing else happens. There is no alert or review flow for it yet.
 - **No rate limit on the webhook.** A limit could block real provider retries after an outage, so there is none. Requests with a bad signature are cheap (rejected before any database query) and logged at info level only.
 - **Stock release must handle late payments.** A late `payment.succeeded` moves a `payment_failed` order to `paid`. A future step that releases stock for failed orders must handle this, or an order could be paid after its stock went back on sale.
+- **Extraction quality is not measured yet.** The tests prove the plumbing (request, validation, review rules), not how well the model reads real notes. Before production, run `claude-haiku-5-5` on a sample of real, anonymised order notes and check the results and the 0.8 threshold by hand; switch `ANTHROPIC_MODEL` to a larger model if Haiku falls short.
+- **Order notes are personal data.** Notes can contain names and addresses, and they are sent to Anthropic for extraction. A real deployment needs this in the privacy notice and a data processing agreement (GDPR), and should check the provider's data retention settings.
+- **Prompt injection is limited, not impossible.** A note can still try to mislead the model. The model's `instructions_detected` flag and its confidence are self-reported, so a clever note could get past both. What it can reach is only the three extracted fields on its own row, which a customer could have typed into the note anyway.
+- **Concurrent duplicate jobs.** If the same job ran twice at the same moment, both runs would call the LLM; the unique key keeps only one row. Jobs are queued once per paid order, so there is no `WithoutOverlapping` lock for now.
+- **Fixed retry backoff.** HTTP 429 is retried after 30 s and 120 s; the API's `retry-after` header is not read.
 
 ## How I work with the agent
 
