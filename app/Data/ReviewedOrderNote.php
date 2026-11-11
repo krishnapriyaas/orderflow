@@ -11,6 +11,9 @@ use Carbon\CarbonImmutable;
  */
 final readonly class ReviewedOrderNote
 {
+    /** A sanity limit against typos such as 2062 for 2026. */
+    public const MAX_YEARS_AHEAD = 2;
+
     public function __construct(
         public ?CarbonImmutable $deliveryDate,
         public ?string $poNumber,
@@ -18,8 +21,9 @@ final readonly class ReviewedOrderNote
     ) {}
 
     /**
-     * Same shape and lengths as the LLM answer. A past delivery date is blocked; a date more
-     * than 365 days ahead is allowed, because a person who checked the note is the check.
+     * Same shape and lengths as the LLM answer. A past delivery date is blocked. A date more
+     * than 365 days ahead is allowed, because a person who checked the note is the check,
+     * but not more than MAX_YEARS_AHEAD years ahead.
      *
      * @param  CarbonImmutable  $today  the business date (Europe/Berlin)
      * @param  string  $prefix  for nested input, for example "fields.12."
@@ -28,7 +32,13 @@ final readonly class ReviewedOrderNote
     public static function rules(CarbonImmutable $today, string $prefix = ''): array
     {
         return [
-            $prefix.'delivery_date' => ['nullable', 'string', 'date_format:Y-m-d', 'after_or_equal:'.$today->toDateString()],
+            $prefix.'delivery_date' => [
+                'nullable',
+                'string',
+                'date_format:Y-m-d',
+                'after_or_equal:'.$today->toDateString(),
+                'before_or_equal:'.$today->addYears(self::MAX_YEARS_AHEAD)->toDateString(),
+            ],
             $prefix.'po_number' => ['nullable', 'string', 'max:'.ExtractedOrderNote::PO_NUMBER_MAX_LENGTH],
             $prefix.'invoice_address' => ['nullable', 'string', 'max:'.ExtractedOrderNote::INVOICE_ADDRESS_MAX_LENGTH],
         ];

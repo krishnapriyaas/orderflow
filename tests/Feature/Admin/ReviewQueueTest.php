@@ -214,6 +214,32 @@ class ReviewQueueTest extends TestCase
         $this->assertSame('2027-12-16', $extraction->delivery_date?->toDateString());
     }
 
+    public function test_a_reviewer_may_approve_a_date_exactly_two_years_ahead(): void
+    {
+        $extraction = $this->extraction();
+
+        Livewire::actingAs($this->admin)
+            ->test(ReviewQueue::class)
+            ->set("fields.{$extraction->id}.delivery_date", '2028-11-11')
+            ->call('approve', $extraction->id)
+            ->assertHasNoErrors();
+
+        $this->assertSame('2028-11-11', $extraction->fresh()?->delivery_date?->toDateString());
+    }
+
+    public function test_approve_with_a_date_more_than_two_years_ahead_fails(): void
+    {
+        $extraction = $this->extraction();
+
+        Livewire::actingAs($this->admin)
+            ->test(ReviewQueue::class)
+            ->set("fields.{$extraction->id}.delivery_date", '2028-11-12')
+            ->call('approve', $extraction->id)
+            ->assertHasErrors(["fields.{$extraction->id}.delivery_date" => 'before_or_equal']);
+
+        $this->assertUnchanged($extraction);
+    }
+
     public function test_approve_with_a_too_long_po_number_fails(): void
     {
         $extraction = $this->extraction();

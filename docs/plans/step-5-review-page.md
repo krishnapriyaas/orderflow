@@ -42,7 +42,8 @@ two staff members does not need.
 
 ### Validation on approve
 
-- `delivery_date`: nullable, `Y-m-d`, not before today (the business date in Europe/Berlin).
+- `delivery_date`: nullable, `Y-m-d`, not before today (the business date in Europe/Berlin)
+  and not more than 2 years after today.
 - `po_number`: nullable, max 100 characters. `invoice_address`: nullable, max 500 characters.
   Blank inputs become `null`.
 - The limits are shared constants used by both `LlmOrderNoteExtractor` and the review form.
@@ -73,6 +74,21 @@ dev dependency).
    the `local` and `testing` environments, so the demo admin with a known password is never
    created on a real server.
 
+## Follow-up decisions after implementation
+
+1. The Gate only allows `is_admin === true`: a user created in code has `null` until it is
+   reloaded. Fixed in its own commit.
+2. `DecideNoteExtraction` holds the shared conditional update used by approve and reject.
+3. "Today in Berlin" lives in one helper, `App\Support\BusinessDate::today()`, used by the
+   extraction action, the review page and the demo seeder. Separate commit.
+4. Sanity limit for reviewers: a delivery date more than 2 years ahead is rejected with a
+   validation error (`ReviewedOrderNote::MAX_YEARS_AHEAD`), against typos such as 2062 for
+   2026. Exactly 2 years ahead is allowed. Decision 2 still holds for anything in between.
+5. Accepted: `strict_types` added to the files touched anyway, the `redirectUsersTo` line in
+   `bootstrap/app.php`, and demo orders do not decrement stock.
+6. Not tested by the agent, left to me: clicking approve and reject in a real browser, and
+   `composer setup` from a fresh clone.
+
 ## Files
 
 Create:
@@ -98,7 +114,8 @@ Change:
 ## Tests
 
 Guest redirected to login; non-admin gets 403; the listing shows only `needs_review`; approve
-with edited fields; approve with a past date fails; approve 400 days ahead works; PO number too
+with edited fields; approve with a past date fails; approve 400 days ahead works; exactly 2 years
+ahead works, one day more fails; PO number too
 long fails; reject; approve or reject a row no longer in review fails; login, wrong password,
 logout; seeder seeds every state and runs twice; enum `transitionTo()`.
 
