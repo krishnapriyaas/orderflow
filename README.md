@@ -10,6 +10,12 @@ Customers order and pay online. A signed payment webhook confirms the payment, a
 
 Built with Laravel 13, Livewire 4 and SQLite, with Claude Code as my AI agent.
 
+**Quick tour (10 minutes):**
+1. "How I worked with the AI agent" below: my workflow and where I changed the agent's work.
+2. `docs/plans/`: each step's plan with my review decisions.
+3. `AI_LOG.md`: a short log for every step.
+4. `app/Actions/` and "Architecture" below: where the business logic lives.
+
 ## AI in the app
 
 - **One narrow job.** After payment, Claude (`claude-haiku-5-5` by default, set with `ANTHROPIC_MODEL`) extracts three fields from the free-text order note: delivery date, PO number and invoice address. The answer is held to a fixed JSON schema (structured outputs), and the API is called with Laravel's Http client.
