@@ -69,3 +69,23 @@ text, not the whole API response (GDPR data minimisation).
 
 **Lesson:** With AI features, the important part is not calling the model but deciding what
 happens when it is wrong. Code makes the final safety decisions, not the model.
+
+---
+## Step 5 — Review page and final README
+
+**Asked:** Plan a Livewire review page for uncertain extractions, a simple admin login,
+demo data and the final README, plan first, no code. Livewire had to be approved by me first.
+
+**Agent proposed:** A clear plan in five small commits. It asked before installing Livewire,
+as CLAUDE.md requires. It made sure the demo admin with a known password is only seeded in
+local and testing, never in production. It tested the app on a real server itself and
+found and fixed a bug in the admin Gate.
+
+**What I changed:** The agent wanted to block reviewers from approving dates more than a year
+ahead. I disagreed: that rule exists because the model can misread a date, and a person who
+checked the note is the check. Then the agent pointed out that my decision allowed year 9999,
+so I added a 2-year sanity limit. I also asked to move the "today in Berlin" logic into one
+helper. Finally, I tested the review page in the browser and a fresh clone myself, following
+only the README: approve, reject, the prompt-injection note and the past-date error all worked.
+
+**Lesson:** The agent also found a gap in my own decision. Reviewing works in both directions.
