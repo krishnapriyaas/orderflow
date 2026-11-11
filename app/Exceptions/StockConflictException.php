@@ -10,9 +10,11 @@ use RuntimeException;
 class StockConflictException extends RuntimeException
 {
     /**
-     * @param  list<array{sku: string, requested: int, available: int}>  $shortages
+     * Only the SKUs are exposed; stock levels are not shown to customers.
+     *
+     * @param  list<string>  $shortSkus
      */
-    public function __construct(public readonly array $shortages)
+    public function __construct(public readonly array $shortSkus)
     {
         parent::__construct('Not enough stock for one or more items in the cart.');
     }
@@ -21,7 +23,7 @@ class StockConflictException extends RuntimeException
     {
         return new JsonResponse([
             'message' => $this->getMessage(),
-            'shortages' => $this->shortages,
+            'short_skus' => $this->shortSkus,
         ], 409);
     }
 }

@@ -16,16 +16,24 @@ class CheckoutRequest extends FormRequest
     }
 
     /**
+     * The email is trimmed and lowercased, so it is stored and compared
+     * (for Idempotency-Key replays) in one canonical form.
+     *
      * The Idempotency-Key header is validated together with the body.
      * It always overrides any `idempotency_key` sent in the body.
      */
     protected function prepareForValidation(): void
     {
+        $email = $this->input('email');
         $key = $this->header('Idempotency-Key');
 
         $this->merge([
             'idempotency_key' => is_string($key) && trim($key) !== '' ? trim($key) : null,
         ]);
+
+        if (is_string($email)) {
+            $this->merge(['email' => mb_strtolower(trim($email))]);
+        }
     }
 
     /**

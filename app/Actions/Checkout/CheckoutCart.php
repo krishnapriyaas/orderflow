@@ -92,11 +92,7 @@ class CheckoutCart
             $product = $products->get($item->product_id);
 
             if ($item->quantity > $product->stock) {
-                $shortages[] = [
-                    'sku' => $product->sku,
-                    'requested' => $item->quantity,
-                    'available' => $product->stock,
-                ];
+                $shortages[] = $product->sku;
             }
 
             $lines[] = ['item' => $item, 'product' => $product];

@@ -120,10 +120,10 @@ class CheckoutCartTest extends TestCase
 
         $this->checkout($cart)
             ->assertConflict()
-            ->assertJsonCount(1, 'shortages')
-            ->assertJsonPath('shortages.0.sku', 'SHORT-1')
-            ->assertJsonPath('shortages.0.requested', 2)
-            ->assertJsonPath('shortages.0.available', 1);
+            ->assertExactJson([
+                'message' => 'Not enough stock for one or more items in the cart.',
+                'short_skus' => ['SHORT-1'],
+            ]);
 
         $this->assertSame(10, $enough->fresh()?->stock);
         $this->assertSame(1, $short->fresh()?->stock);
@@ -163,6 +163,33 @@ class CheckoutCartTest extends TestCase
         $this->assertSame(1, Order::query()->count());
         $this->assertSame(7, $product->fresh()?->stock);
         $this->assertCount(1, $this->gateway->createdPayments());
+    }
+
+    public function test_the_email_is_trimmed_and_lowercased_before_storing(): void
+    {
+        $cart = Cart::factory()->create();
+        CartItem::factory()->for($cart)->create(['quantity' => 1]);
+
+        $this->checkout($cart, ['email' => '  Buyer@Example.COM  '])
+            ->assertCreated()
+            ->assertJsonPath('data.customer_email', 'buyer@example.com');
+
+        $this->assertSame('buyer@example.com', Order::query()->sole()->customer_email);
+    }
+
+    public function test_an_idempotent_replay_matches_the_email_case_insensitively(): void
+    {
+        $cart = Cart::factory()->create();
+        CartItem::factory()->for($cart)->create(['quantity' => 1]);
+        $headers = ['Idempotency-Key' => 'checkout-abc-123'];
+
+        $first = $this->checkout($cart, ['email' => 'buyer@example.com'], $headers)->assertCreated();
+        $second = $this->checkout($cart, ['email' => ' BUYER@Example.com '], $headers)
+            ->assertOk()
+            ->assertHeader('Idempotent-Replayed', 'true');
+
+        $this->assertSame($first->json('data.uuid'), $second->json('data.uuid'));
+        $this->assertSame(1, Order::query()->count());
     }
 
     public function test_the_same_idempotency_key_returns_the_same_order(): void

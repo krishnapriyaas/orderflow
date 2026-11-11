@@ -55,6 +55,17 @@ Invalid transition throws `InvalidOrderStatusTransitionException`.
 8. SQLite ignores `lockForUpdate()`; documented as a known limit in the README.
 9. Addition: same `Idempotency-Key` with a different email or note → 409, not the old order.
 
+## Follow-up decisions after implementation
+
+1. Keep `orders.payment_redirect_url` (added so a replay returns the same response).
+2. Emails are trimmed and lowercased before storing and comparing for replays.
+3. Replaying a `payment_failed` order returns it as is; no payment retry flow yet (README known limit).
+4. Only `PaymentGatewayException` is handled; the `PaymentGateway` docblock requires
+   implementations to wrap provider errors in it.
+5. The stock conflict 409 returns only the short SKUs (`short_skus`), no stock levels.
+6. The unique-constraint race path is not covered by tests (README known limit).
+7. Keep the README note that stock is not released after a payment failure.
+
 ## Files
 
 Create:
