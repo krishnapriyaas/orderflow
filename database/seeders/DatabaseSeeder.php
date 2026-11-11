@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
 use App\Models\User;
@@ -21,5 +23,10 @@ class DatabaseSeeder extends Seeder
             ['email' => 'test@example.com'],
             ['name' => 'Test User', 'password' => 'password'],
         );
+
+        // The demo admin has a known password: never create it on a real server.
+        if (app()->environment(['local', 'testing'])) {
+            $this->call(DemoOrderSeeder::class);
+        }
     }
 }
