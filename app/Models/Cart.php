@@ -9,12 +9,14 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 /**
  * @property int $id
  * @property string $token
  * @property-read Collection<int, CartItem> $items
+ * @property-read Order|null $order
  */
 class Cart extends Model
 {
@@ -41,6 +43,14 @@ class Cart extends Model
     public function items(): HasMany
     {
         return $this->hasMany(CartItem::class);
+    }
+
+    /**
+     * @return HasOne<Order, $this>
+     */
+    public function order(): HasOne
+    {
+        return $this->hasOne(Order::class);
     }
 
     public function totalCents(): int
