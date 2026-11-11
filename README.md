@@ -55,10 +55,40 @@ Work in progress. Full documentation comes when the app is complete.
 - **Prompt injection is limited, not impossible.** A note can still try to mislead the model. The model's `instructions_detected` flag and its confidence are self-reported, so a clever note could get past both. What it can reach is only the three extracted fields on its own row, which a customer could have typed into the note anyway.
 - **Concurrent duplicate jobs.** If the same job ran twice at the same moment, both runs would call the LLM; the unique key keeps only one row. Jobs are queued once per paid order, so there is no `WithoutOverlapping` lock for now.
 - **Fixed retry backoff.** HTTP 429 is retried after 30 s and 120 s; the API's `retry-after` header is not read.
-- Real LLM API not yet called. All tests use fakes or Http::fake. The request format still needs one check with a real API key.
+- **Real LLM API not yet called.** All tests use fakes or Http::fake. The request format still needs one check with a real API key.
 
-## How I work with the agent
+## How I worked with the AI agent
 
-- `CLAUDE.md` has the rules the agent follows in this project.
-- `AI_LOG.md` is my daily log: what I asked, what the agent got right or wrong, and what I decided.
-- `docs/plans/` has each step's plan with my review decisions.
+I built OrderFlow with Claude Code as the agent that plans and writes the code. I used a
+second Claude chat as a reviewer to challenge the plans. I made the final decisions.
+
+**The loop for every step:**
+1. I write a prompt with the goal, the rules and the tests I expect.
+2. The agent reads `CLAUDE.md` and the earlier plans, and proposes a plan. No code yet.
+3. The agent lists what it is unsure about. I answer each point and add what is missing.
+4. The agent saves the plan with my decisions in `docs/plans/`, then implements it.
+5. Pint, Larastan and all tests must pass. The agent lists what it changed and what it is
+   still unsure about, and I decide again before pushing.
+6. I write what happened in `AI_LOG.md`.
+
+**Examples where I changed the agent's work:**
+- **Stock levels in errors (Step 2).** The 409 for missing stock showed how much stock
+  was left. I removed it, because a wholesaler does not want customers to see its stock.
+- **Amount check (Step 3).** The plan marked an order paid without checking the amount.
+  I added a check that the paid amount and currency match the order.
+- **Prompt injection (Step 4).** I added an `instructions_detected` field. A note that
+  tries to manipulate the model always goes to a person, because a manipulated model
+  can't be trusted to judge itself.
+
+**What I learned:**
+- Asking the agent to list what it is unsure about found real problems early, like the
+  untested race path and the timezone for "next Friday".
+- A test is only useful if it can fail. The agent proved one by breaking the code on
+  purpose and putting it back.
+- With AI features, the hard part is not calling the model but deciding what happens
+  when it is wrong.
+
+**Files:**
+- `CLAUDE.md`: the rules the agent follows.
+- `docs/plans/`: each step's plan with my review decisions.
+- `AI_LOG.md`: what I asked, what the agent proposed, and what I changed.
