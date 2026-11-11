@@ -55,8 +55,10 @@ Work in progress. Full documentation comes when the app is complete.
 - **Prompt injection is limited, not impossible.** A note can still try to mislead the model. The model's `instructions_detected` flag and its confidence are self-reported, so a clever note could get past both. What it can reach is only the three extracted fields on its own row, which a customer could have typed into the note anyway.
 - **Concurrent duplicate jobs.** If the same job ran twice at the same moment, both runs would call the LLM; the unique key keeps only one row. Jobs are queued once per paid order, so there is no `WithoutOverlapping` lock for now.
 - **Fixed retry backoff.** HTTP 429 is retried after 30 s and 120 s; the API's `retry-after` header is not read.
+- Real LLM API not yet called. All tests use fakes or Http::fake. The request format still needs one check with a real API key.
 
 ## How I work with the agent
 
 - `CLAUDE.md` has the rules the agent follows in this project.
 - `AI_LOG.md` is my daily log: what I asked, what the agent got right or wrong, and what I decided.
+- `docs/plans/` has each step's plan with my review decisions.
