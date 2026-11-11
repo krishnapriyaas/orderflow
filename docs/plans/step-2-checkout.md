@@ -1,7 +1,7 @@
 # Step 2 — Checkout and payment
 
-Status: approved 2026-11-11.
-
+Plan written by Claude Code. Reviewed and approved by me on 2026-11-11.
+My review is at the end of this file.
 ## Goal
 
 `POST /api/carts/{cart}/checkout` turns a cart into an order and starts a payment.
@@ -98,3 +98,32 @@ Second commit (decision 5):
 Happy path; empty cart; insufficient stock with no stock change; price snapshot; double
 checkout; same Idempotency-Key (replay); same key with different cart / email / note (409);
 validation; unknown cart; gateway failure (502, `payment_failed`); enum transitions (unit).
+## My review
+
+I reviewed this plan with a second Claude chat as a reviewer, then made the final decisions myself.
+
+What I agreed with:
+- Payment is called after the commit, because the payment provider can be slow.
+  If we call it inside the transaction, the products stay locked and other customers have to wait.
+- Products are locked in id order, because two checkouts could lock the same products
+  in a different order and wait for each other forever (deadlock). The same order for everyone prevents this.
+
+What I changed:
+- The 409 for missing stock showed stock levels. I removed them, because a wholesaler
+  does not want customers or competitors to see how much stock is left. Now it only shows which SKUs are short.
+- Emails are now lowercased, because "Buyer@x.com" and "buyer@x.com" are the same person.
+  A retry with different casing should not count as a different request.
+
+What I added:
+- Same Idempotency-Key with a different email returns 409, because the key means
+  "this is the same request again". If the content is different, it is not a retry but a mistake,
+  and returning the old order would hide the problem.
+
+What I accepted as a limit:
+- Stock is not released after a payment failure. I think this is OK for a demo because
+  the main goal is safe checkout and payment. Releasing stock needs its own flow
+  (cancel, timeout), and I wrote it in the README as a known limit.
+
+What I learned:
+- Asking the agent to list what it is unsure about found real problems, like the 409 vs 422 question
+  and the untested race path. I would not have found all of them alone.
