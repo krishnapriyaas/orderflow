@@ -2,6 +2,7 @@
 
 Plan written by Claude Code. Reviewed and approved by me on 2026-11-11.
 My review is at the end of this file.
+
 ## Goal
 
 `POST /api/carts/{cart}/checkout` turns a cart into an order and starts a payment.
@@ -98,6 +99,7 @@ Second commit (decision 5):
 Happy path; empty cart; insufficient stock with no stock change; price snapshot; double
 checkout; same Idempotency-Key (replay); same key with different cart / email / note (409);
 validation; unknown cart; gateway failure (502, `payment_failed`); enum transitions (unit).
+
 ## My review
 
 I reviewed this plan with a second Claude chat as a reviewer, then made the final decisions myself.
