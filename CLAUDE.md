@@ -7,7 +7,7 @@ After payment, an LLM extracts structured data from the free-text order note
 (delivery date, invoice address, PO number). Uncertain results go to a human review queue.
 
 ## Stack
-- Laravel (latest), PHP 8.2+
+- Laravel (latest), PHP 8.3+
 - SQLite for local development and tests
 - Livewire for the single back-office page
 - PHPUnit for tests, Pint for code style, Larastan for static analysis
@@ -22,6 +22,9 @@ After payment, an LLM extracts structured data from the free-text order note
   - `OrderNoteExtractor` → LLM implementation + `FakeOrderNoteExtractor` for tests
 - Side effects after payment run through events and queued jobs, never inline in controllers.
 - Money is always stored as integers in cents. Never use floats for money.
+- Error responses must not expose internal business data (stock levels, costs).
+- Never trust LLM output: validate it in PHP, and let code, not the model, make
+  safety decisions.
 
 ## Coding conventions
 - `declare(strict_types=1);` in every PHP file.
