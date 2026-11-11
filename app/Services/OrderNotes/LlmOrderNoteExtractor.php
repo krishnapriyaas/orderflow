@@ -51,11 +51,10 @@ class LlmOrderNoteExtractor implements OrderNoteExtractor
     public function extract(string $note, CarbonImmutable $today): ExtractedOrderNote
     {
         $response = $this->send($note, $today);
-        $raw = $response->body();
 
-        $decoded = $this->decodeAnswer($response, $raw);
+        [$decoded, $answerText] = $this->decodeAnswer($response);
 
-        return $this->toData($decoded, $raw);
+        return $this->toData($decoded, $answerText);
     }
 
     /**
@@ -127,28 +126,41 @@ class LlmOrderNoteExtractor implements OrderNoteExtractor
 
         $status = $response->status();
 
+        // Error bodies are not stored: there is no model answer, and the status says enough.
         if ($status === 429 || $status >= 500) {
-            throw new NoteExtractionUnavailableException("LLM API returned HTTP {$status}.", $response->body());
+            throw new NoteExtractionUnavailableException("LLM API returned HTTP {$status}.");
         }
 
         if (! $response->successful()) {
-            throw new InvalidNoteExtractionException(NoteReviewReason::ServiceError, "LLM API returned HTTP {$status}.", $response->body());
+            throw new InvalidNoteExtractionException(NoteReviewReason::ServiceError, "LLM API returned HTTP {$status}.");
         }
 
         return $response;
     }
 
     /**
-     * @return array<mixed>
+     * Returns the decoded answer and the model's answer text. Only that text is kept as
+     * raw_response (GDPR data minimisation): not the request, the note, or the API metadata.
+     *
+     * @return array{0: array<mixed>, 1: string}
      */
-    private function decodeAnswer(Response $response, string $raw): array
+    private function decodeAnswer(Response $response): array
     {
         $message = $response->json();
 
         if (! is_array($message) || ! is_array($message['content'] ?? null)) {
-            throw new InvalidNoteExtractionException(NoteReviewReason::InvalidResponse, 'The API response has no content.', $raw);
+            throw new InvalidNoteExtractionException(NoteReviewReason::InvalidResponse, 'The API response has no content.');
         }
 
+        // Read blocks by type: with thinking on, the answer is not the first block.
+        $text = '';
+        foreach ($message['content'] as $block) {
+            if (is_array($block) && ($block['type'] ?? null) === 'text' && is_string($block['text'] ?? null)) {
+                $text .= $block['text'];
+            }
+        }
+
+        $raw = $text === '' ? null : $text;
         $stopReason = $message['stop_reason'] ?? null;
 
         if ($stopReason === 'refusal') {
@@ -163,21 +175,13 @@ class LlmOrderNoteExtractor implements OrderNoteExtractor
             );
         }
 
-        // Read blocks by type: with thinking on, the answer is not the first block.
-        $text = '';
-        foreach ($message['content'] as $block) {
-            if (is_array($block) && ($block['type'] ?? null) === 'text' && is_string($block['text'] ?? null)) {
-                $text .= $block['text'];
-            }
-        }
-
         $decoded = json_decode($text, true);
 
         if (! is_array($decoded)) {
             throw new InvalidNoteExtractionException(NoteReviewReason::InvalidResponse, 'The model answer is not a JSON object.', $raw);
         }
 
-        return $decoded;
+        return [$decoded, $text];
     }
 
     /**

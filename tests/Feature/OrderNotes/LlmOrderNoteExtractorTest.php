@@ -76,7 +76,8 @@ class LlmOrderNoteExtractorTest extends TestCase
         $this->assertSame("Muster GmbH\nHauptstr. 1\n10115 Berlin", $result->invoiceAddress);
         $this->assertSame(0.92, $result->confidence);
         $this->assertFalse($result->instructionsDetected);
-        $this->assertStringContainsString('"usage"', (string) $result->rawResponse);
+        // Only the model's answer text is kept: not the note, the thinking block or API metadata.
+        $this->assertSame(json_encode($this->validAnswer(), JSON_THROW_ON_ERROR), $result->rawResponse);
 
         Http::assertSentCount(1);
         Http::assertSent(function (Request $request): bool {
@@ -174,7 +175,7 @@ class LlmOrderNoteExtractorTest extends TestCase
             $this->fail('Expected InvalidNoteExtractionException.');
         } catch (InvalidNoteExtractionException $e) {
             $this->assertSame(NoteReviewReason::InvalidResponse, $e->reason);
-            $this->assertStringContainsString('msg_01', (string) $e->rawResponse);
+            $this->assertSame(json_encode($answer, JSON_THROW_ON_ERROR), $e->rawResponse);
         }
     }
 
@@ -221,10 +222,13 @@ class LlmOrderNoteExtractorTest extends TestCase
     {
         Http::fake([self::URL => Http::response(['type' => 'error'], $status)]);
 
-        $this->expectException(NoteExtractionUnavailableException::class);
-        $this->expectExceptionMessage("LLM API returned HTTP {$status}.");
-
-        $this->extractor()->extract('note', $this->today());
+        try {
+            $this->extractor()->extract('note', $this->today());
+            $this->fail('Expected NoteExtractionUnavailableException.');
+        } catch (NoteExtractionUnavailableException $e) {
+            $this->assertSame("LLM API returned HTTP {$status}.", $e->getMessage());
+            $this->assertNull($e->rawResponse);
+        }
     }
 
     public function test_a_connection_error_is_retryable(): void
@@ -254,6 +258,7 @@ class LlmOrderNoteExtractorTest extends TestCase
             $this->fail('Expected InvalidNoteExtractionException.');
         } catch (InvalidNoteExtractionException $e) {
             $this->assertSame(NoteReviewReason::ServiceError, $e->reason);
+            $this->assertNull($e->rawResponse);
         }
     }
 }

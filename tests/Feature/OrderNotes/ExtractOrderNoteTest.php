@@ -331,28 +331,34 @@ class ExtractOrderNoteTest extends TestCase
     }
 
     /**
-     * @return array<string, array{0: array<string, mixed>, 1: NoteReviewReason}>
+     * @return array<string, array{0: array<string, mixed>, 1: NoteReviewReason, 2: string|null}>
      */
     public static function badResponses(): array
     {
         $valid = ['delivery_date' => '2026-11-20', 'po_number' => '4711', 'invoice_address' => null, 'confidence' => 0.9, 'instructions_detected' => false];
+        $missingField = json_encode(array_diff_key($valid, ['po_number' => true]), JSON_THROW_ON_ERROR);
         $message = fn (string $text, string $stop = 'end_turn'): array => [
-            'content' => [['type' => 'text', 'text' => $text]],
+            'id' => 'msg_1',
+            'content' => [['type' => 'thinking', 'thinking' => '', 'signature' => 'sig'], ['type' => 'text', 'text' => $text]],
             'stop_reason' => $stop,
+            'usage' => ['input_tokens' => 400, 'output_tokens' => 20],
         ];
 
         return [
-            'invalid JSON' => [$message('{"delivery_date": "2026-11-20", '), NoteReviewReason::InvalidResponse],
-            'missing field' => [$message(json_encode(array_diff_key($valid, ['po_number' => true]), JSON_THROW_ON_ERROR)), NoteReviewReason::InvalidResponse],
-            'refusal' => [$message('', 'refusal'), NoteReviewReason::Refused],
+            'invalid JSON' => [$message('{"delivery_date": "2026-11-20", '), NoteReviewReason::InvalidResponse, '{"delivery_date": "2026-11-20", '],
+            'missing field' => [$message($missingField), NoteReviewReason::InvalidResponse, $missingField],
+            'refusal without text' => [$message('', 'refusal'), NoteReviewReason::Refused, null],
         ];
     }
 
     /**
+     * raw_response keeps only the model's answer text (GDPR data minimisation),
+     * not the API body with its id, thinking block and usage.
+     *
      * @param  array<string, mixed>  $body
      */
     #[DataProvider('badResponses')]
-    public function test_a_bad_llm_response_goes_to_review_with_the_raw_response(array $body, NoteReviewReason $reason): void
+    public function test_a_bad_llm_response_goes_to_review_with_only_the_answer_text(array $body, NoteReviewReason $reason, ?string $rawResponse): void
     {
         $this->app->instance(OrderNoteExtractor::class, $this->llmExtractor());
         Http::fake([self::API_URL => Http::response($body)]);
@@ -362,7 +368,7 @@ class ExtractOrderNoteTest extends TestCase
         $extraction = $this->extraction();
         $this->assertSame(NoteExtractionStatus::NeedsReview, $extraction->status);
         $this->assertSame($reason, $extraction->review_reason);
-        $this->assertSame(json_encode($body), $extraction->raw_response);
+        $this->assertSame($rawResponse, $extraction->raw_response);
         $this->assertNotNull($extraction->error);
     }
 
@@ -375,6 +381,7 @@ class ExtractOrderNoteTest extends TestCase
 
         Http::assertSentCount(1);
         $this->assertSame(NoteReviewReason::ServiceError, $this->extraction()->review_reason);
+        $this->assertNull($this->extraction()->raw_response);
         $this->assertSame('LLM API returned HTTP 401.', $this->extraction()->error);
     }
 
@@ -412,6 +419,7 @@ class ExtractOrderNoteTest extends TestCase
         $this->assertSame(NoteExtractionStatus::NeedsReview, $extraction->status);
         $this->assertSame(NoteReviewReason::ServiceUnavailable, $extraction->review_reason);
         $this->assertSame('LLM API returned HTTP 500.', $extraction->error);
+        $this->assertNull($extraction->raw_response);
         $this->assertSame(0, DB::table('jobs')->count());
         $this->assertSame(1, DB::table('failed_jobs')->count());
     }

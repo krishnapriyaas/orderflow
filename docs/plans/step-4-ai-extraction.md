@@ -87,6 +87,19 @@ timestamps.
 8. A delivery date more than one year ahead → `needs_review`.
 9. Http client only, no SDK.
 
+## Follow-up decisions after implementation
+
+1. Keep the `failed_jobs` row after the last failed attempt: the extraction is in review, and
+   the failed job still shows up in monitoring.
+2. Keep the retry test that runs the real queue worker on the database queue.
+3. `raw_response` stores only the model's answer text, not the whole API body (GDPR data
+   minimisation). HTTP error bodies are not stored; `error` says which status came back.
+4. The webhook tests now run the extraction action through the sync queue (their orders have
+   no note, so it does nothing). Accepted.
+5. `max_days_ahead` stays a fixed config value (365), not an `.env` setting.
+6. Found while implementing: delivery dates are compared as calendar dates (`Y-m-d`), not
+   timestamps, because "today" is midnight in Berlin (23:00 UTC the day before).
+
 ## Fake and binding
 
 `FakeOrderNoteExtractor` (`willReturn()`, `willThrow()`, `calls()`) returns all-null fields with

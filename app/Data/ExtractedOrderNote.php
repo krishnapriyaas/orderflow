@@ -15,7 +15,7 @@ final readonly class ExtractedOrderNote
     /**
      * @param  float  $confidence  0.0 – 1.0, as reported by the model
      * @param  bool  $instructionsDetected  the note tried to instruct the model
-     * @param  string|null  $rawResponse  the provider's raw response body, kept for review
+     * @param  string|null  $rawResponse  the model's answer text only, kept for review
      */
     public function __construct(
         public ?CarbonImmutable $deliveryDate,
