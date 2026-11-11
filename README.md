@@ -39,7 +39,8 @@ Work in progress. Full documentation comes when the app is complete.
 - **Untested race path.** When two checkouts race, the losing request hits a unique constraint (`cart_id` or `idempotency_key`), and `CheckoutCart` catches it and returns the existing order or a 409. SQLite runs write transactions one at a time, so the test suite cannot produce this race and the path is not covered by tests.
 - **Malformed signed webhooks get 422.** A correctly signed payload that is missing fields is rejected with 422 and an error log, and nothing is stored. The provider will keep retrying it until it gives up, so these errors need a person to look at them.
 - **Amount mismatches need manual handling.** A webhook whose amount or currency does not match the order is stored as `amount_mismatch` and logged as an error, but nothing else happens. There is no alert or review flow for it yet.
-- **Unknown webhook types still need the payment fields.** Every webhook must include `data.payment_reference`, `data.amount_cents` and `data.currency`, even a type we do not handle. A real provider's other event types might not, and would then get 422.
+- **No rate limit on the webhook.** A limit could block real provider retries after an outage, so there is none. Requests with a bad signature are cheap (rejected before any database query) and logged at info level only.
+- **Stock release must handle late payments.** A late `payment.succeeded` moves a `payment_failed` order to `paid`. A future step that releases stock for failed orders must handle this, or an order could be paid after its stock went back on sale.
 
 ## How I work with the agent
 

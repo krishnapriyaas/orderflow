@@ -65,6 +65,19 @@ Headers: `X-Timestamp` (Unix seconds), `X-Signature` (lowercase hex
    `insertOrIgnore` and not check-then-insert.
 7. `X-Signature` is plain lowercase hex, `X-Timestamp` is Unix seconds.
 
+## Follow-up decisions after implementation
+
+1. A duplicate `event_id` with a different payload is still `duplicate` (the first one wins),
+   and a warning is logged.
+2. Payment fields (`data.payment_reference`, `data.amount_cents`, `data.currency`) are required
+   only for known event types. Unknown types are stored as `unknown_type` with any `data` shape.
+3. The currency is uppercased before comparing, so `"eur"` matches `"EUR"`. The stored payload
+   keeps the body as sent.
+4. The event row is still inserted first and updated with `outcome` / `processed_at` after.
+5. Invalid signatures are logged at info level, not warning. No rate limit, because it could
+   block real provider retries (README known limit). A missing secret is still an error.
+6. README known limit: a future stock release step must handle `payment_failed → paid`.
+
 ## Files
 
 Create:

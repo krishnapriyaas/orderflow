@@ -14,6 +14,7 @@ use App\Models\WebhookEvent;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use LogicException;
 
 class HandlePaymentWebhook
 {
@@ -27,12 +28,33 @@ class HandlePaymentWebhook
         } catch (UniqueConstraintViolationException $e) {
             // The event id is already stored (earlier or concurrent delivery). The whole
             // transaction rolled back, so this delivery changed nothing.
-            if (WebhookEvent::query()->where('event_id', $event->eventId)->exists()) {
-                return WebhookOutcome::Duplicate;
+            $existing = WebhookEvent::query()->where('event_id', $event->eventId)->first();
+
+            if ($existing === null) {
+                throw $e;
             }
 
-            throw $e;
+            $this->warnIfPayloadDiffers($existing, $event);
+
+            return WebhookOutcome::Duplicate;
         }
+    }
+
+    /**
+     * A redelivery should carry the same body. A different body under the same id
+     * is not applied (the first one wins), but someone should know about it.
+     */
+    private function warnIfPayloadDiffers(WebhookEvent $existing, PaymentWebhookEvent $event): void
+    {
+        if ($existing->payload === $event->payload) {
+            return;
+        }
+
+        Log::warning('Payment webhook duplicate event id with a different payload.', [
+            'event_id' => $event->eventId,
+            'stored_type' => $existing->type,
+            'received_type' => $event->type,
+        ]);
     }
 
     private function process(PaymentWebhookEvent $event): WebhookOutcome
@@ -67,6 +89,10 @@ class HandlePaymentWebhook
             Log::info('Payment webhook has an unhandled type.', $context);
 
             return WebhookOutcome::UnknownType;
+        }
+
+        if ($event->paymentReference === null || $event->amountCents === null || $event->currency === null) {
+            throw new LogicException('PaymentWebhookRequest requires the payment fields for known event types.');
         }
 
         $order = Order::query()

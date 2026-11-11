@@ -45,9 +45,13 @@ final class WebhookSignatureVerifier
         return true;
     }
 
+    /**
+     * Info, not warning: anyone can send junk to a public endpoint, and that is not
+     * something to act on. A missing secret (our own misconfiguration) stays an error.
+     */
     private function reject(string $reason): bool
     {
-        Log::warning('Payment webhook rejected: '.$reason.'.');
+        Log::info('Payment webhook rejected: '.$reason.'.');
 
         return false;
     }

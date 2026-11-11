@@ -120,8 +120,9 @@ class PaymentWebhookTest extends TestCase
 
     // --- Signature -----------------------------------------------------------
 
-    public function test_a_wrong_signature_is_rejected(): void
+    public function test_a_wrong_signature_is_rejected_and_logged_at_info_level(): void
     {
+        Log::spy();
         $order = $this->order();
         $webhook = $this->signed('payment.succeeded');
 
@@ -129,6 +130,11 @@ class PaymentWebhookTest extends TestCase
             ->assertUnauthorized();
 
         $this->assertNothingWritten($order);
+        Log::shouldHaveReceived('info')->once()->withArgs(
+            fn (string $message): bool => $message === 'Payment webhook rejected: signature mismatch.',
+        );
+        Log::shouldNotHaveReceived('warning');
+        Log::shouldNotHaveReceived('error');
     }
 
     public function test_a_signature_made_with_another_secret_is_rejected(): void
@@ -251,6 +257,7 @@ class PaymentWebhookTest extends TestCase
 
     public function test_the_same_event_id_is_processed_only_once(): void
     {
+        Log::spy();
         Event::fake([OrderPaid::class]);
         $order = $this->order();
         $webhook = $this->signed('payment.succeeded', 'evt_dup');
@@ -262,10 +269,13 @@ class PaymentWebhookTest extends TestCase
         $this->assertSame(WebhookOutcome::Applied, WebhookEvent::query()->sole()->outcome);
         $this->assertSame(OrderStatus::Paid, $order->fresh()?->status);
         Event::assertDispatchedTimes(OrderPaid::class, 1);
+        // Same body redelivered: a normal retry, nothing to warn about.
+        Log::shouldNotHaveReceived('warning');
     }
 
-    public function test_a_duplicate_event_id_does_not_apply_a_different_payload(): void
+    public function test_a_duplicate_event_id_with_a_different_payload_is_not_applied_and_is_logged(): void
     {
+        Log::spy();
         $order = $this->order();
 
         $this->send($this->signed('payment.failed', 'evt_dup'))->assertOk();
@@ -275,6 +285,10 @@ class PaymentWebhookTest extends TestCase
 
         $this->assertSame(OrderStatus::PaymentFailed, $order->fresh()?->status);
         $this->assertSame('payment.failed', WebhookEvent::query()->sole()->type);
+        Log::shouldHaveReceived('warning')->once()->withArgs(
+            fn (string $message, array $context): bool => $message === 'Payment webhook duplicate event id with a different payload.'
+                && $context === ['event_id' => 'evt_dup', 'stored_type' => 'payment.failed', 'received_type' => 'payment.succeeded'],
+        );
     }
 
     public function test_a_failed_event_after_paid_is_stored_but_does_not_change_the_status(): void
@@ -354,16 +368,50 @@ class PaymentWebhookTest extends TestCase
         );
     }
 
-    public function test_an_unknown_event_type_is_stored_and_ignored(): void
+    public function test_a_lowercase_currency_matches_the_order(): void
     {
         $order = $this->order();
 
-        $this->send($this->signed('payment.refunded'))
+        $this->send($this->signed('payment.succeeded', currency: 'eur'))
+            ->assertOk()
+            ->assertExactJson(['outcome' => 'applied']);
+
+        $this->assertSame(OrderStatus::Paid, $order->fresh()?->status);
+        // The stored payload is the provider's body as sent.
+        $this->assertSame('eur', WebhookEvent::query()->sole()->payload['data']['currency']);
+    }
+
+    /**
+     * Unknown types do not need the payment fields, and may have any `data` shape.
+     *
+     * @return array<string, array{0: array<string, mixed>}>
+     */
+    public static function unknownTypeBodies(): array
+    {
+        return [
+            'with payment fields' => [['data' => ['payment_reference' => 'fake_pay_123', 'amount_cents' => 6670, 'currency' => 'EUR']]],
+            'without data' => [[]],
+            'with another data shape' => [['data' => ['dispute_id' => 'dp_1', 'amount_cents' => 'n/a']]],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $extra
+     */
+    #[DataProvider('unknownTypeBodies')]
+    public function test_an_unknown_event_type_is_stored_and_ignored(array $extra): void
+    {
+        $order = $this->order();
+        $body = json_encode(['id' => 'evt_other', 'type' => 'payment.refunded'] + $extra, JSON_THROW_ON_ERROR);
+
+        $this->send($this->gateway->signWebhookBody($body))
             ->assertOk()
             ->assertExactJson(['outcome' => 'unknown_type']);
 
         $this->assertSame(OrderStatus::PendingPayment, $order->fresh()?->status);
-        $this->assertSame(WebhookOutcome::UnknownType, WebhookEvent::query()->sole()->outcome);
+        $event = WebhookEvent::query()->sole();
+        $this->assertSame(WebhookOutcome::UnknownType, $event->outcome);
+        $this->assertSame('payment.refunded', $event->type);
     }
 
     // --- OrderPaid and ExtractOrderNote --------------------------------------
