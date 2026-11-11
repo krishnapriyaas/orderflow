@@ -20,7 +20,9 @@ enum OrderStatus: string
     {
         return match ($this) {
             self::PendingPayment => [self::Paid, self::PaymentFailed, self::Cancelled],
-            self::PaymentFailed => [self::PendingPayment, self::Cancelled],
+            // payment_failed → paid: a late payment.succeeded webhook wins. The provider is
+            // the source of truth for money, and the stock is still reserved.
+            self::PaymentFailed => [self::Paid, self::PendingPayment, self::Cancelled],
             self::Paid, self::Cancelled => [],
         };
     }

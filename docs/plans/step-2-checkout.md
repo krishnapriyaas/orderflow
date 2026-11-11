@@ -35,10 +35,13 @@ violation is caught and resolved to the same replay / 409 logic.
 
 ```
 pending_payment → paid | payment_failed | cancelled
-payment_failed  → pending_payment (retry) | cancelled
+payment_failed  → paid | pending_payment (retry) | cancelled
 paid            → terminal (no paid → cancelled for now)
 cancelled       → terminal
 ```
+
+`payment_failed → paid` was added in Step 3: a late `payment.succeeded` webhook wins, because
+the provider is the source of truth for money and the stock is still reserved.
 
 Invalid transition throws `InvalidOrderStatusTransitionException`.
 
@@ -52,7 +55,7 @@ Invalid transition throws `InvalidOrderStatusTransitionException`.
 5. Cart item add/update/remove on a checked-out cart returns 409 — separate commit after the
    checkout commit.
 6. Orders use a `uuid` column as public id.
-7. Transitions as above.
+7. Transitions as above (`payment_failed → paid` added in Step 3).
 8. SQLite ignores `lockForUpdate()`; documented as a known limit in the README.
 9. Addition: same `Idempotency-Key` with a different email or note → 409, not the old order.
 

@@ -20,6 +20,7 @@ class OrderStatusTest extends TestCase
             'pending → paid' => [OrderStatus::PendingPayment, OrderStatus::Paid],
             'pending → payment_failed' => [OrderStatus::PendingPayment, OrderStatus::PaymentFailed],
             'pending → cancelled' => [OrderStatus::PendingPayment, OrderStatus::Cancelled],
+            'payment_failed → paid (late success webhook)' => [OrderStatus::PaymentFailed, OrderStatus::Paid],
             'payment_failed → pending (retry)' => [OrderStatus::PaymentFailed, OrderStatus::PendingPayment],
             'payment_failed → cancelled' => [OrderStatus::PaymentFailed, OrderStatus::Cancelled],
         ];
