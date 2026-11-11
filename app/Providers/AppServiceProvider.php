@@ -62,6 +62,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Gate::define('review-order-notes', fn (User $user): bool => $user->is_admin);
+        Gate::define('review-order-notes', fn (User $user): bool => $user->is_admin === true);
     }
 }
