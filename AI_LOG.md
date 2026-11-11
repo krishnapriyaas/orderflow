@@ -5,7 +5,7 @@ For each feature: what I asked, what the agent proposed, what I changed and why.
 
 ---
 
-## Day 1 — Setup, products and cart
+## Step 1 — Setup, products and cart
 
 **Asked:** Plan products, cart API, Action classes and tests, plan first, no code.
 
