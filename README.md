@@ -94,7 +94,7 @@ flowchart LR
 
 ## Run it locally
 
-Requirements: PHP 8.3+, Composer, Node.js (for the front-end build in `composer setup`), and `curl` and `openssl` for the webhook example.
+Requirements: PHP 8.4+, Composer, Node.js (for the front-end build in `composer setup`), and `curl` and `openssl` for the webhook example.
 
 ```bash
 git clone https://github.com/krishnapriyaas/orderflow.git
