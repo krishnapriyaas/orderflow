@@ -176,7 +176,7 @@ php artisan test
 - **Prompt injection is limited, not impossible.** A note can still try to mislead the model. The model's `instructions_detected` flag and its confidence are self-reported, so a clever note could get past both. What it can reach is only the three extracted fields on its own row, which a customer could have typed into the note anyway.
 - **Concurrent duplicate jobs.** If the same job ran twice at the same moment, both runs would call the LLM; the unique key keeps only one row. Jobs are queued once per paid order, so there is no `WithoutOverlapping` lock for now.
 - **Fixed retry backoff.** HTTP 429 is retried after 30 s and 120 s; the API's `retry-after` header is not read.
-- **Real LLM API not yet called.** All tests use fakes or Http::fake. The request format still needs one check with a real API key.
+- **Real LLM API not yet called.** I built and tested this without an API key: all tests use `Http::fake` with responses in the documented Messages API format, and without a key the app falls back to the fake extractor. The first step with a real key is to check the request format once, then run the model on real, anonymised notes.
 - **One admin role.** `is_admin` is a single flag. There are no roles or per-user permissions, and no way to manage admins in the app.
 - **Demo credentials.** The demo admin uses `password`. It is only seeded in `local` and `testing`, but any real deployment needs its own admin account and a strong password.
 - **No alert for the review queue.** Nobody is notified when a note goes to review; someone has to open the page.
