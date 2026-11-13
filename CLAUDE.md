@@ -7,7 +7,7 @@ After payment, an LLM extracts structured data from the free-text order note
 (delivery date, invoice address, PO number). Uncertain results go to a human review queue.
 
 ## Stack
-- Laravel (latest), PHP 8.3+
+- Laravel (latest), PHP 8.4+
 - SQLite for local development and tests
 - Livewire for the single back-office page
 - PHPUnit for tests, Pint for code style, Larastan for static analysis
