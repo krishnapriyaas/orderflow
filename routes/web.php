@@ -6,9 +6,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Livewire\Admin\ReviewQueue;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::redirect('/', '/admin/reviews');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
